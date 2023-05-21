@@ -55,12 +55,12 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     download_yt(url)
     new_files = get_new_files()
     for filename in new_files:
-        await update.message.chat.send_audio(f"{FOLDER_PATH}/{filename}")
-        await update.message.reply_text(filename)
+        file_path = f"{FOLDER_PATH}/{filename}"
+        await update.message.chat.send_audio(file_path)
+        os.remove(file_path)
 
 
 def main() -> None:
-    logger.error(TG_TOKEN)
     application = Application.builder().token(TG_TOKEN).build()
 
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
