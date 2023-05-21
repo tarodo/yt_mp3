@@ -1,0 +1,12 @@
+version: '3.9'
+
+services:
+  tg:
+    build:
+      context: ./tg
+      dockerfile: Dockerfile
+    volumes:
+      - ./youtube-dl:/youtube-dl
+    restart: always
+    env_file:
+      - ./tg/.env
