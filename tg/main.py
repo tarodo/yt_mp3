@@ -5,8 +5,12 @@ from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 from yt_dlp import YoutubeDL
 
+from pydub import AudioSegment
+from pathlib import Path
+
 FOLDER_PATH = os.getenv("FOLDER_PATH")
 TG_TOKEN = os.getenv("TG_BOT_TOKEN")
+FILE_LENGTH = int(os.getenv("FILE_LENGTH_MIN", 15))
 
 YOUTUBE_BASE_LINKS = ("https://www.youtube.com/", "https://youtu.be/")
 
@@ -17,13 +21,14 @@ logger = logging.getLogger(__name__)
 
 
 def download_yt(yt_link: str):
+    logger.info(f"Start file handling :: {yt_link}")
     params = {
         "format": "bestaudio/best",
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "mp3",
-                "preferredquality": "192",
+                "preferredquality": "320",
             }
         ],
         "outtmpl": f"{FOLDER_PATH}/%(title).50s",
@@ -48,17 +53,41 @@ def get_new_files():
     return result
 
 
+def split_mp3_file(file_path: Path) -> int:
+    logger.info(f"Start file splitting :: {file_path}")
+    audio = AudioSegment.from_file(file_path)
+    length = FILE_LENGTH * 60 * 1000
+    if len(audio) <= length:
+        return 0
+    parts = [audio[i:i + length] for i in range(0, len(audio), length)]
+    for i, part in enumerate(parts):
+        new_file_name = f"{file_path.stem}_p{i+1}.mp3"
+        part.export(file_path.with_name(new_file_name), format="mp3")
+    return len(parts)
+
+
+def split_files():
+    for filename in get_new_files():
+        file_path = Path(f"{FOLDER_PATH}/{filename}")
+        if not file_path.suffix == ".mp3":
+            continue
+        parts_cnt = split_mp3_file(file_path)
+        if parts_cnt:
+            os.remove(file_path)
+
+
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Echo the user message."""
     url = update.message.text
     if not url.startswith(YOUTUBE_BASE_LINKS):
         await update.message.reply_text("It is not youtube link")
         return
     download_yt(url)
-    new_files = get_new_files()
-    for filename in new_files:
-        file_path = f"{FOLDER_PATH}/{filename}"
-        await update.message.chat.send_audio(file_path)
+    split_files()
+
+    for filename in get_new_files():
+        file_path = Path(f"{FOLDER_PATH}/{filename}")
+        if file_path.suffix == ".mp3":
+            await update.message.chat.send_audio(file_path)
         os.remove(file_path)
 
 
