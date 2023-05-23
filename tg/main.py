@@ -4,10 +4,10 @@ from pathlib import Path
 
 import ffmpeg
 import psutil
-from pydub import AudioSegment
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 from yt_dlp import YoutubeDL
+import re
 
 FOLDER_PATH = os.getenv("FOLDER_PATH")
 TG_TOKEN = os.getenv("TG_BOT_TOKEN")
@@ -59,6 +59,12 @@ def show_memory(txt: str = "") -> None:
     logger.info(f"Memory : {memory_size} Mb : {txt}")
 
 
+def clear_file_name(file_name: str) -> str:
+    file_name = file_name.strip()
+    file_name = re.sub(r'[^\w\s]+', '', file_name)
+    return file_name
+
+
 def get_audio_duration(file_path):
     probe = ffmpeg.probe(file_path)
     audio_duration = next(
@@ -71,12 +77,11 @@ def split_ffmpeg_file(file_path: Path) -> int:
     show_memory("Start ffmpeg splitting")
     segment_duration = FILE_LENGTH * 60
     total_duration = get_audio_duration(file_path)
-    show_memory("After duration count")
     start_times = [start for start in range(0, int(total_duration), segment_duration)]
-    show_memory("After count start times")
     for i, start_time in enumerate(start_times):
         show_memory(f"{i+1} iteration")
-        new_file_name = f"{file_path.stem}_p{i+1}.mp3"
+        new_file_name = clear_file_name(file_path.stem)
+        new_file_name = f"{i+1:03}_{new_file_name}.mp3"
         new_file_path = file_path.with_name(new_file_name)
         (
             ffmpeg.input(file_path, ss=start_time, t=segment_duration)
@@ -94,41 +99,6 @@ def split_files_ffmpeg():
         audio_size = round(os.path.getsize(file_path) / (1024**2), 2)
         logger.info(f"Audio size :: {audio_size} Mb")
         parts_cnt = split_ffmpeg_file(file_path)
-        if parts_cnt:
-            os.remove(file_path)
-
-
-def split_mp3_file(file_path: Path) -> int:
-    logger.info(f"Start file splitting :: {file_path}")
-
-    show_memory("Start split")
-
-    audio = AudioSegment.from_file(file_path)
-    show_memory("After AudioSegment loading")
-
-    length = FILE_LENGTH * 60 * 1000
-    if len(audio) <= length:
-        return 0
-    parts = [audio[i : i + length] for i in range(0, len(audio), length)]
-    show_memory("Before splitting")
-    for i, part in enumerate(parts):
-        show_memory(f"{i+1} iteration")
-        new_file_name = f"{file_path.stem}_p{i+1}.mp3"
-        new_file_path = file_path.with_name(new_file_name)
-        part.export(new_file_path, format="mp3")
-        segment_size = round(os.path.getsize(new_file_path) / (1024**2), 2)
-        logger.info(f"{i+1} segment size :: {segment_size} Mb")
-    return len(parts)
-
-
-def split_files():
-    for filename in get_new_files():
-        file_path = Path(f"{FOLDER_PATH}/{filename}")
-        if not file_path.suffix == ".mp3":
-            continue
-        audio_size = round(os.path.getsize(file_path) / (1024**2), 2)
-        logger.info(f"Audio size :: {audio_size} Mb")
-        parts_cnt = split_mp3_file(file_path)
         if parts_cnt:
             os.remove(file_path)
 
