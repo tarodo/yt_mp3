@@ -98,12 +98,12 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("It is not youtube link")
         return
     download_yt(url)
-    split_files()
+    # split_files()
 
     for filename in get_new_files():
         file_path = Path(f"{FOLDER_PATH}/{filename}")
         if file_path.suffix == ".mp3":
-            await update.message.chat.send_audio(file_path)
+            await update.message.chat.send_audio(file_path, write_timeout=None)
         os.remove(file_path)
 
 
