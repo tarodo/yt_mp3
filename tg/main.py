@@ -47,7 +47,7 @@ def download_yt(yt_link: str):
 
 def get_new_files():
     result = []
-    for filename in os.listdir(FOLDER_PATH):
+    for filename in sorted(os.listdir(FOLDER_PATH), reverse=True):
         file_path = os.path.join(FOLDER_PATH, filename)
         if os.path.isfile(file_path):
             result.append(filename)
