@@ -140,7 +140,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     download_yt(url)
     split_files_ffmpeg()
-    split_files()
+    # split_files()
 
     for filename in get_new_files():
         file_path = Path(f"{FOLDER_PATH}/{filename}")
