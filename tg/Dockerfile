@@ -2,7 +2,9 @@ FROM python:alpine
 
 RUN apk add --no-cache \
   ffmpeg \
-  tzdata
+  tzdata \
+  build-base \
+  linux-headers
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app

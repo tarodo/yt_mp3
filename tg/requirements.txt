@@ -1,3 +1,5 @@
 python-telegram-bot==20.3
 yt-dlp==2023.3.4
 pydub==0.25.1
+ffmpeg-python
+psutil
