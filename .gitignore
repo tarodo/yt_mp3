@@ -4,3 +4,4 @@ venv/
 .DS_Store
 youtube-dl/
 minio/data
+minio.env

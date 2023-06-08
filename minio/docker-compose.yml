@@ -1,0 +1,15 @@
+version: '3.9'
+
+services:
+  minio:
+    image: quay.io/minio/minio
+    command: server --console-address ":9090"
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    restart: always
+    volumes:
+      - ./minio/data:/mnt/data
+      - ./minio/minio.env:/etc/config.env
+    environment:
+      - MINIO_CONFIG_ENV_FILE=/etc/config.env
