@@ -1,15 +1,14 @@
 import logging
 import os
+import re
 from pathlib import Path
 
 import ffmpeg
 import psutil
+from load_s3 import get_minio_client, upload_file_to_minio
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 from yt_dlp import YoutubeDL
-import re
-
-from load_s3 import upload_file_to_minio, get_minio_client
 
 FOLDER_PATH = os.getenv("FOLDER_PATH")
 TG_TOKEN = os.getenv("TG_BOT_TOKEN")
@@ -69,7 +68,7 @@ def show_memory(txt: str = "") -> None:
 
 def clear_file_name(file_name: str) -> str:
     file_name = file_name.strip()
-    file_name = re.sub(r'[^\w\s]+', '', file_name)
+    file_name = re.sub(r"[^\w\s]+", "", file_name)
     return file_name
 
 
@@ -122,7 +121,10 @@ async def send_s3_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if file_path.suffix == ".mp3":
             client = get_minio_client(MINIO_HOST, MINIO_PORT, MINIO_USER, MINIO_PASS)
             new_url = upload_file_to_minio(client, file_path, BUCKET_NAME)
-            await update.message.chat.send_message(new_url)
+            await update.message.chat.send_message(
+                text=f"[{clear_file_name(file_path.name)}]({new_url})",
+                parse_mode="Markdown",
+            )
 
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

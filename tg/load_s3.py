@@ -1,19 +1,14 @@
+import logging
 from datetime import timedelta
 from pathlib import Path
 
 from minio import Minio
-import logging
 
 logger = logging.getLogger(__name__)
 
 
 def get_minio_client(url: str, port: str, user: str, secret: str) -> Minio:
-    return Minio(
-        f"{url}:{port}",
-        access_key=user,
-        secret_key=secret,
-        secure=False
-    )
+    return Minio(f"{url}:{port}", access_key=user, secret_key=secret, secure=False)
 
 
 def upload_file_to_minio(client: Minio, file_path: Path, bucket_name: str):
@@ -25,7 +20,9 @@ def upload_file_to_minio(client: Minio, file_path: Path, bucket_name: str):
     try:
         client.fput_object(bucket_name, file_name, file_path)
 
-        presigned_url = client.presigned_get_object(bucket_name, file_name, expires=timedelta(minutes=1440))
+        presigned_url = client.presigned_get_object(
+            bucket_name, file_name, expires=timedelta(minutes=1440)
+        )
         logger.info(f"File sent successfully, presigned url :: {presigned_url}")
         return presigned_url
     except Exception as err:
