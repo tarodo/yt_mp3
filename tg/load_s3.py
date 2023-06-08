@@ -1,7 +1,7 @@
 from datetime import timedelta
 from pathlib import Path
 
-from minio import Minio, InvalidResponseError
+from minio import Minio
 import logging
 
 logger = logging.getLogger(__name__)

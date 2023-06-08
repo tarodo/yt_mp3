@@ -9,11 +9,17 @@ from telegram.ext import Application, ContextTypes, MessageHandler, filters
 from yt_dlp import YoutubeDL
 import re
 
-from load_s3 import upload_file_to_minio
+from load_s3 import upload_file_to_minio, get_minio_client
 
 FOLDER_PATH = os.getenv("FOLDER_PATH")
 TG_TOKEN = os.getenv("TG_BOT_TOKEN")
 FILE_LENGTH = int(os.getenv("FILE_LENGTH_MIN", 15))
+BUCKET_NAME = os.getenv("BUCKET_NAME")
+
+MINIO_HOST = os.getenv("MINIO_HOST")
+MINIO_PORT = os.getenv("MINIO_PORT")
+MINIO_USER = os.getenv("MINIO_USER")
+MINIO_PASS = os.getenv("MINIO_PASS")
 
 YOUTUBE_BASE_LINKS = ("https://www.youtube.com/", "https://youtu.be/")
 
@@ -110,19 +116,25 @@ def split_files_ffmpeg():
             os.remove(file_path)
 
 
+async def send_s3_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    for filename in get_new_files():
+        file_path = Path(f"{FOLDER_PATH}/{filename}")
+        if file_path.suffix == ".mp3":
+            client = get_minio_client(MINIO_HOST, MINIO_PORT, MINIO_USER, MINIO_PASS)
+            new_url = upload_file_to_minio(client, file_path, BUCKET_NAME)
+            await update.message.chat.send_message(new_url)
+
+
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     url = update.message.text
     if not url.startswith(YOUTUBE_BASE_LINKS):
         await update.message.reply_text("It is not youtube link")
         return
     download_yt(url)
+    await send_s3_link(update, context)
     # split_files_ffmpeg()
     for filename in get_new_files():
         file_path = Path(f"{FOLDER_PATH}/{filename}")
-        if file_path.suffix == ".mp3":
-            new_url = upload_file_to_minio(file_path, "torr")
-            await update.message.chat.send_audio(audio=new_url)
-            await update.message.chat.send_message(new_url)
         os.remove(file_path)
 
 
