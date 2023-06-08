@@ -9,6 +9,8 @@ from telegram.ext import Application, ContextTypes, MessageHandler, filters
 from yt_dlp import YoutubeDL
 import re
 
+from load_s3 import upload_file_to_minio
+
 FOLDER_PATH = os.getenv("FOLDER_PATH")
 TG_TOKEN = os.getenv("TG_BOT_TOKEN")
 FILE_LENGTH = int(os.getenv("FILE_LENGTH_MIN", 15))
@@ -83,11 +85,16 @@ def split_ffmpeg_file(file_path: Path) -> int:
         new_file_name = clear_file_name(file_path.stem)
         new_file_name = f"{i+1:03}_{new_file_name}.mp3"
         new_file_path = file_path.with_name(new_file_name)
-        (
-            ffmpeg.input(file_path, ss=start_time, t=segment_duration)
-            .output(str(new_file_path))
-            .run(cmd=["ffmpeg", "-loglevel", "error"])
-        )
+        try:
+            (
+                ffmpeg.input(file_path, ss=start_time, t=segment_duration)
+                .output(str(new_file_path))
+                .run(cmd=["ffmpeg", "-y", "-loglevel", "error"])
+            )
+        except ffmpeg._run.Error as e:
+            print(f"FFmpeg error: {e.stderr}")
+            raise
+
     return len(start_times)
 
 
@@ -109,13 +116,13 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("It is not youtube link")
         return
     download_yt(url)
-    split_files_ffmpeg()
-    # split_files()
-
+    # split_files_ffmpeg()
     for filename in get_new_files():
         file_path = Path(f"{FOLDER_PATH}/{filename}")
         if file_path.suffix == ".mp3":
-            await update.message.chat.send_audio(file_path, write_timeout=None)
+            new_url = upload_file_to_minio(file_path, "torr")
+            await update.message.chat.send_audio(audio=new_url)
+            await update.message.chat.send_message(new_url)
         os.remove(file_path)
 
 
