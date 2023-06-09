@@ -134,11 +134,15 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("It is not youtube link")
         return
     download_yt(url)
-    await send_s3_link(update, context)
-    # split_files_ffmpeg()
-    for filename in get_new_files():
-        file_path = Path(f"{FOLDER_PATH}/{filename}")
-        os.remove(file_path)
+    try:
+        await send_s3_link(update, context)
+    except Exception as e:
+        # split_files_ffmpeg()
+        logger.error(f"An error occurred :: {e}")
+    finally:
+        for filename in get_new_files():
+            file_path = Path(f"{FOLDER_PATH}/{filename}")
+            os.remove(file_path)
 
 
 def main() -> None:
