@@ -39,7 +39,7 @@ def download_yt(yt_link: str):
                 "preferredquality": "320",
             }
         ],
-        "outtmpl": f"{FOLDER_PATH}/%(title).50s",
+        "outtmpl": f"{FOLDER_PATH}/%(title).100s",
         "download_archive": None,
         "updatetime": "True",
     }
@@ -69,6 +69,7 @@ def show_memory(txt: str = "") -> None:
 def clear_file_name(file_name: str) -> str:
     file_name = file_name.strip()
     file_name = re.sub(r"[^\w\s]+", "", file_name)
+    file_name = " ".join(file_name.split())
     return file_name
 
 
@@ -123,7 +124,7 @@ async def send_s3_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
             client = get_minio_client(MINIO_HOST, MINIO_PORT, MINIO_USER, MINIO_PASS)
             new_url = upload_file_to_minio(client, file_path, str(user_id))
             await update.message.chat.send_message(
-                text=f"[{clear_file_name(file_path.name)}]({new_url})",
+                text=f"[{clear_file_name(file_path.stem)}]({new_url})",
                 parse_mode="Markdown",
             )
 
