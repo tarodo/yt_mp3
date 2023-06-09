@@ -3,8 +3,6 @@ import os
 import re
 from pathlib import Path
 
-import ffmpeg
-import psutil
 from load_s3 import get_minio_client, upload_file_to_minio
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
@@ -61,59 +59,11 @@ def get_new_files():
     return result
 
 
-def show_memory(txt: str = "") -> None:
-    memory_size = round(psutil.Process(os.getpid()).memory_info().rss / 1024**2, 2)
-    logger.info(f"Memory : {memory_size} Mb : {txt}")
-
-
 def clear_file_name(file_name: str) -> str:
     file_name = file_name.strip()
     file_name = re.sub(r"[^\w\s]+", "", file_name)
     file_name = " ".join(file_name.split())
     return file_name
-
-
-def get_audio_duration(file_path):
-    probe = ffmpeg.probe(file_path)
-    audio_duration = next(
-        (stream for stream in probe["streams"] if stream["codec_type"] == "audio"), None
-    )
-    return float(audio_duration["duration"])
-
-
-def split_ffmpeg_file(file_path: Path) -> int:
-    show_memory("Start ffmpeg splitting")
-    segment_duration = FILE_LENGTH * 60
-    total_duration = get_audio_duration(file_path)
-    start_times = [start for start in range(0, int(total_duration), segment_duration)]
-    for i, start_time in enumerate(start_times):
-        show_memory(f"{i+1} iteration")
-        new_file_name = clear_file_name(file_path.stem)
-        new_file_name = f"{i+1:03}_{new_file_name}.mp3"
-        new_file_path = file_path.with_name(new_file_name)
-        try:
-            (
-                ffmpeg.input(file_path, ss=start_time, t=segment_duration)
-                .output(str(new_file_path))
-                .run(cmd=["ffmpeg", "-y", "-loglevel", "error"])
-            )
-        except ffmpeg._run.Error as e:
-            print(f"FFmpeg error: {e.stderr}")
-            raise
-
-    return len(start_times)
-
-
-def split_files_ffmpeg():
-    for filename in get_new_files():
-        file_path = Path(f"{FOLDER_PATH}/{filename}")
-        if not file_path.suffix == ".mp3":
-            continue
-        audio_size = round(os.path.getsize(file_path) / (1024**2), 2)
-        logger.info(f"Audio size :: {audio_size} Mb")
-        parts_cnt = split_ffmpeg_file(file_path)
-        if parts_cnt:
-            os.remove(file_path)
 
 
 async def send_s3_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -138,7 +88,6 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         await send_s3_link(update, context)
     except Exception as e:
-        # split_files_ffmpeg()
         logger.error(f"An error occurred :: {e}")
     finally:
         for filename in get_new_files():
