@@ -13,7 +13,7 @@ def get_minio_client(url: str, port: str, user: str, secret: str) -> Minio:
 
 def upload_file_to_minio(client: Minio, file_path: Path, bucket_name: str):
     file_name = file_path.name
-    logger.info(f"Start send file :: {file_name}")
+    logger.info(f"Start send file : {file_name} :: into : {bucket_name}")
 
     if not client.bucket_exists(bucket_name):
         client.make_bucket(bucket_name)

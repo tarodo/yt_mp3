@@ -116,11 +116,12 @@ def split_files_ffmpeg():
 
 
 async def send_s3_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.chat_id
     for filename in get_new_files():
         file_path = Path(f"{FOLDER_PATH}/{filename}")
         if file_path.suffix == ".mp3":
             client = get_minio_client(MINIO_HOST, MINIO_PORT, MINIO_USER, MINIO_PASS)
-            new_url = upload_file_to_minio(client, file_path, BUCKET_NAME)
+            new_url = upload_file_to_minio(client, file_path, str(user_id))
             await update.message.chat.send_message(
                 text=f"[{clear_file_name(file_path.name)}]({new_url})",
                 parse_mode="Markdown",
