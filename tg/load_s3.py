@@ -38,7 +38,7 @@ def upload_file_to_minio(client: Minio, file_path: Path, bucket_name: str):
         client.fput_object(bucket_name, file_name, file_path)
 
         presigned_url = client.presigned_get_object(
-            bucket_name, file_name, expires=timedelta(minutes=1440)
+            bucket_name, file_name, expires=timedelta(minutes=2880)
         )
         logger.info(f"File sent successfully, presigned url :: {presigned_url}")
         return presigned_url
